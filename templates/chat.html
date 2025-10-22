@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat with Homie</title>
+    <!-- Montserrat Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}">
+</head>
+<body>
+    <div class="static-background" id="staticBackground" 
+         style="background-image: url('/static/{{ avatar }}-avatar-bg.jpg')"></div>
+
+    <div class="video-background" id="videoBackground">
+        <video id="avatarVideo" muted playsinline>
+            <source src="/static/videos/lofi-{{ avatar }}-avatar.mp4" type="video/mp4">
+        </video>
+    </div>
+
+    <audio id="backgroundMusic" loop style="display: none;">
+        Your browser does not support the audio element.
+    </audio>
+
+    <div class="header">
+        <div class="header-left">
+            <div class="header-info">
+                <h2>Homie AI</h2>
+                <p>Your personal friend</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="header-btn" onclick="activateCalmMode()" title="Calm breathing exercise">
+                Breathing
+            <button class="header-btn" onclick="openJournal()" title="Daily journal">
+                Journal
+            </button>
+            <button class="header-btn" onclick="openReminders()" title="Set reminders">
+                Reminders
+            </button>
+            
+            <!-- Profile Dropdown -->
+            <div class="profile-dropdown">
+                <button class="header-btn profile-btn" onclick="toggleProfileDropdown()" title="Profile">
+                    ⚙️
+                </button>
+                <div class="dropdown-menu" id="profileDropdown">
+                    <!-- Music Controls -->
+                    <div class="dropdown-item music-controls" onclick="event.stopPropagation()">
+                        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                            <span>Background Music</span>
+                            <label class="music-toggle" style="margin: 0;">
+                                <input type="checkbox" id="musicToggle" onchange="toggleBackgroundMusic()" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Music Track Selection -->
+                    <div class="dropdown-item music-track" onclick="event.stopPropagation()">
+                        <div style="font-size: 12px; color: rgba(240,240,240,0.7); margin-bottom: 5px;">Select Track:</div>
+                        <select id="musicTrackSelect" onchange="changeMusicTrack(this.value)" style="width: 100%; padding: 5px; background: rgba(50,50,50,0.8); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; color: #f0f0f0; font-size: 12px;">
+                            <option value="1">Lofi Beats 1</option>
+                            <option value="2">Lofi Beats 2</option>
+                            <option value="3">Lofi Beats 3</option>
+                            <option value="4">Lofi Beats 4</option>
+                            <option value="5">Lofi Beats 5</option>
+                        </select>
+                    </div>
+
+                    <!-- Volume Control -->
+                    <div class="dropdown-item music-volume" onclick="event.stopPropagation()">
+                        <div style="font-size: 12px; color: rgba(240,240,240,0.7); margin-bottom: 5px;">Volume:</div>
+                        <input type="range" id="musicVolume" min="0" max="1" step="0.1" value="0.5" onchange="changeMusicVolume(this.value)" style="width: 100%;" onclick="event.stopPropagation()">
+                    </div>
+                    
+                    <div class="dropdown-item" onclick="clearHistory()">
+                        Clear Chat History
+                    </div>
+                    <div class="dropdown-item logout-item" onclick="logout()">
+                        Logout
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="chat-container">
+        <div class="messages-section">
+            <div class="messages-container" id="messagesContainer">
+                <div class="welcome-message">
+                    <h3>Hey {{ username }}! 👋</h3>
+                    <p>I'm Homie, your personal AI friend. Let's chat about anything - I'm here to listen, help, or just vibe with you!</p>
+                </div>
+            </div>
+
+            <div class="input-section">
+                <!-- Media Preview Area -->
+                <div id="mediaPreview" style="display: none; padding: 10px; background: rgba(30,30,30,0.95); border-radius: 12px 12px 0 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span id="mediaPreviewIcon" style="font-size: 24px;">📷</span>
+                            <div>
+                                <div id="mediaPreviewName" style="color: #f0f0f0; font-size: 14px; font-weight: 500;"></div>
+                                <div id="mediaPreviewSize" style="color: rgba(240,240,240,0.6); font-size: 12px;"></div>
+                            </div>
+                        </div>
+                        <button onclick="clearMediaSelection()" style="background: rgba(255,100,100,0.2); border: 1px solid rgba(255,100,100,0.3); border-radius: 6px; color: #ff6b6b; padding: 6px 12px; cursor: pointer; font-size: 13px;">Remove</button>
+                    </div>
+                </div>
+
+                <div class="input-container">
+                    <!-- File Input (Hidden) -->
+                    <input type="file" id="mediaInput" accept="image/*,video/*" style="display: none;" onchange="handleMediaSelect(event)">
+                    
+                    <div class="input-wrapper">
+                        <textarea 
+                            id="messageInput" 
+                            placeholder="Type your message here..."
+                            rows="1"
+                            onkeypress="handleKeyPress(event)"
+                            oninput="autoResize(this)"
+                        ></textarea>
+                    </div>
+                    
+                    <!-- Media Upload Button -->
+                    <button class="media-btn" onclick="document.getElementById('mediaInput').click()" title="Upload Image or Video">
+                        🔗
+                    </button>
+                    
+                    <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+                        ➤
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Journal Modal -->
+    <div id="journalModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 999; overflow-y: auto;">
+        <div style="max-width: 700px; margin: 50px auto; background: rgba(30,30,30,0.95); border-radius: 20px; padding: 30px; border: 1px solid rgba(255,255,255,0.1);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="color: #f0f0f0;">📔 Reflection Journal</h2>
+                <button onclick="closeJournal()" style="background: none; border: none; color: #f0f0f0; font-size: 24px; cursor: pointer;">×</button>
+            </div>
+            
+            <!-- Quick Prompts -->
+            <div style="margin-bottom: 20px;">
+                <p style="color: rgba(240,240,240,0.7); margin-bottom: 10px; font-size: 14px;">Quick prompts to get started:</p>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                    <button onclick="setJournalPrompt('gratitude')" style="padding: 6px 12px; background: rgba(100,150,200,0.2); border: 1px solid rgba(100,150,200,0.3); border-radius: 6px; color: #a8d5ff; cursor: pointer; font-size: 13px;">3 things I'm grateful for</button>
+                    <button onclick="setJournalPrompt('win')" style="padding: 6px 12px; background: rgba(100,200,150,0.2); border: 1px solid rgba(100,200,150,0.3); border-radius: 6px; color: #a8ffb4; cursor: pointer; font-size: 13px;">Today's win</button>
+                    <button onclick="setJournalPrompt('challenge')" style="padding: 6px 12px; background: rgba(255,180,100,0.2); border: 1px solid rgba(255,180,100,0.3); border-radius: 6px; color: #ffb366; cursor: pointer; font-size: 13px;">Challenge I faced</button>
+                    <button onclick="setJournalPrompt('lesson')" style="padding: 6px 12px; background: rgba(200,150,255,0.2); border: 1px solid rgba(200,150,255,0.3); border-radius: 6px; color: #d9b3ff; cursor: pointer; font-size: 13px;">What I learned</button>
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 30px; padding: 20px; background: rgba(50,50,50,0.5); border-radius: 12px;">
+                <textarea id="journalContent" placeholder="Start writing..." style="width: 100%; min-height: 120px; padding: 12px; background: rgba(60,60,60,0.8); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #f0f0f0; margin-bottom: 10px; font-family: inherit; resize: vertical; line-height: 1.6;"></textarea>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <select id="journalMood" style="padding: 10px; background: rgba(60,60,60,0.8); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #f0f0f0; flex: 1;">
+                        <option value="">How are you feeling?</option>
+                        <option value="amazing">😊 Amazing</option>
+                        <option value="good">🙂 Good</option>
+                        <option value="okay">😐 Okay</option>
+                        <option value="stressed">😰 Stressed</option>
+                        <option value="sad">😢 Sad</option>
+                        <option value="tired">😴 Tired</option>
+                    </select>
+                    <button onclick="saveJournalEntry()" style="padding: 10px 20px; background: rgba(100,150,200,0.3); border: 1px solid rgba(100,150,200,0.4); border-radius: 8px; color: #a8d5ff; cursor: pointer; font-weight: 500;">Save Entry</button>
+                </div>
+            </div>
+            
+            <div id="journalEntriesList"></div>
+        </div>
+    </div>
+
+    <!-- Reminders Modal -->
+    <div id="remindersModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 999;">
+        <div style="max-width: 500px; margin: 50px auto; background: rgba(30,30,30,0.95); border-radius: 20px; padding: 30px; border: 1px solid rgba(255,255,255,0.1);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="color: #f0f0f0;">⏰ Your Reminders</h2>
+                <button onclick="closeReminders()" style="background: none; border: none; color: #f0f0f0; font-size: 24px; cursor: pointer;">×</button>
+            </div>
+            
+            <!-- Quick Reminder Templates -->
+            <div style="margin-bottom: 20px;">
+                <p style="color: rgba(240,240,240,0.7); margin-bottom: 10px; font-size: 14px;">Quick reminder templates:</p>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px;">
+                    <button onclick="setReminderTemplate('hydration')" style="padding: 6px 12px; background: rgba(100,150,200,0.2); border: 1px solid rgba(100,150,200,0.3); border-radius: 6px; color: #a8d5ff; cursor: pointer; font-size: 13px;">💧 Drink Water</button>
+                    <button onclick="setReminderTemplate('stretch')" style="padding: 6px 12px; background: rgba(100,200,150,0.2); border: 1px solid rgba(100,200,150,0.3); border-radius: 6px; color: #a8ffb4; cursor: pointer; font-size: 13px;">🧘 Take a Break</button>
+                    <button onclick="setReminderTemplate('medication')" style="padding: 6px 12px; background: rgba(255,180,100,0.2); border: 1px solid rgba(255,180,100,0.3); border-radius: 6px; color: #ffb366; cursor: pointer; font-size: 13px;">💊 Take Medication</button>
+                    <button onclick="setReminderTemplate('meeting')" style="padding: 6px 12px; background: rgba(200,150,255,0.2); border: 1px solid rgba(200,150,255,0.3); border-radius: 6px; color: #d9b3ff; cursor: pointer; font-size: 13px;">📅 Meeting</button>
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 20px; padding: 20px; background: rgba(50,50,50,0.5); border-radius: 12px;">
+                <input type="text" id="reminderTitle" placeholder="What should I remind you about?" style="width: 100%; padding: 10px; background: rgba(60,60,60,0.8); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #f0f0f0; margin-bottom: 10px;">
+                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <input type="date" id="reminderDate" style="flex: 1; padding: 10px; background: rgba(60,60,60,0.8); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #f0f0f0;">
+                    <input type="time" id="reminderTime" style="flex: 1; padding: 10px; background: rgba(60,60,60,0.8); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #f0f0f0;">
+                </div>
+                <select id="reminderRepeat" style="width: 100%; padding: 10px; background: rgba(60,60,60,0.8); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #f0f0f0; margin-bottom: 10px;">
+                    <option value="once">Once</option>
+                    <option value="daily">Daily</option>
+                    <option value="weekdays">Weekdays</option>
+                    <option value="weekly">Weekly</option>
+                </select>
+                <button onclick="saveReminder()" style="width: 100%; padding: 12px; background: rgba(70,70,70,0.8); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white; cursor: pointer;">Add Reminder</button>
+            </div>
+            
+            <div id="remindersList"></div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+</body>
+</html>

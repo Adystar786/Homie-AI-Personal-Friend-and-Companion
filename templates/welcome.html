@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Homie AI - Your Personal Friend</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/welcome.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <!-- Welcome Screen -->
+            <div id="welcomeScreen" class="welcome-screen">
+                <div class="logo">
+                    <h1>Homie AI</h1>
+                    <p>Your personal friend who gets you</p>
+                </div>
+                <div class="welcome-btns">
+                    <button class="btn" onclick="showLogin()">Login</button>
+                    <button class="btn" onclick="showSignup()">Sign Up</button>
+                </div>
+            </div>
+
+            <!-- Login Form -->
+            <div id="loginForm" class="form-container">
+                <div class="logo">
+                    <h1>Welcome Back</h1>
+                    <p>Your homie missed you</p>
+                </div>
+                <div id="loginError" class="error-message"></div>
+                <form onsubmit="handleLogin(event)">
+                    <div class="input-group">
+                        <label>Email</label>
+                        <input type="email" id="loginEmail" placeholder="your@email.com" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Password</label>
+                        <input type="password" id="loginPassword" placeholder="••••••••" required>
+                    </div>
+                    <button type="submit" class="btn" id="loginBtn">Login</button>
+                </form>
+                <div class="switch-form">
+                    Don't have an account? <a onclick="showSignup()">Sign up</a>
+                </div>
+            </div>
+
+            <!-- Signup Form -->
+            <div id="signupForm" class="form-container">
+                <div class="logo">
+                    <h1>Join Homie</h1>
+                    <p>Let's get to know each other</p>
+                </div>
+                <div id="signupError" class="error-message"></div>
+                <form onsubmit="handleSignup(event)">
+                    <div class="input-group">
+                        <label>Username</label>
+                        <input type="text" id="signupUsername" placeholder="What should I call you?" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Email</label>
+                        <input type="email" id="signupEmail" placeholder="your@email.com" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Password</label>
+                        <input type="password" id="signupPassword" placeholder="••••••••" required>
+                    </div>
+                    
+                    <!-- Avatar Selection -->
+                    <div class="input-group">
+                        <label>Choose Your Avatar</label>
+                        <div class="avatar-selection">
+                            <div class="avatar-option">
+                                <input type="radio" id="avatarGirl" name="avatar" value="girl" checked style="display: none;">
+                                <label for="avatarGirl" style="cursor: pointer;">
+                                    <div class="avatar-preview">
+                                        <img src="/static/girl-avatar.png" alt="Girl Avatar">
+                                    </div>
+                                    <span>Girl</span>
+                                </label>
+                            </div>
+                            <div class="avatar-option">
+                                <input type="radio" id="avatarBoy" name="avatar" value="boy" style="display: none;">
+                                <label for="avatarBoy" style="cursor: pointer;">
+                                    <div class="avatar-preview">
+                                        <img src="/static/boy-avatar.png" alt="Boy Avatar">
+                                    </div>
+                                    <span>Boy</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn" id="signupBtn">Create Account</button>
+                </form>
+                <div class="switch-form">
+                    Already have an account? <a onclick="showLogin()">Login</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <audio id="backgroundMusic" loop style="display: none;">
+        Your browser does not support the audio element.
+    </audio>
+
+    <script src="{{ url_for('static', filename='js/welcome.js') }}"></script>
+</body>
+</html>
