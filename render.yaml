@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: homie-ai
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn 'homie-ai.app:app' --bind 0.0.0.0:$PORT --workers 2 --threads 2"
+    autoDeploy: true
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GOOGLE_API_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false

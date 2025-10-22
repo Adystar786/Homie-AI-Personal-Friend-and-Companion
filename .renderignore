@@ -1,0 +1,9 @@
+.git/
+*.env
+homie-ai/.env
+*.pyc
+__pycache__/
+node_modules/
+.vscode/
+*.sqlite3
+*.db
