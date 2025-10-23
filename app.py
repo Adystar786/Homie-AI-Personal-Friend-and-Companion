@@ -23,23 +23,34 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-change-
 
 # ===== FIXED DATABASE CONFIGURATION =====
 def get_database_url():
-    database_url = os.environ.get('DATABASE_URL')
+    database_url = os.environ.get('DATABASE_URL', '').strip()
     
-    # Debug logging
-    print(f"🔍 Initial DATABASE_URL: {database_url}")
+    print(f"🔍 DATABASE_URL from environment: {'Found' if database_url else 'NOT FOUND'}")
     
-    if database_url:
+    if database_url and database_url != 'sqlite:///homie.db':
         # Render PostgreSQL uses postgres:// but SQLAlchemy needs postgresql://
         if database_url.startswith('postgres://'):
             database_url = database_url.replace('postgres://', 'postgresql://', 1)
-            print(f"🔧 Converted to PostgreSQL URL: {database_url[:50]}...")
-        else:
-            print(f"🔧 Using existing database URL: {database_url[:50]}...")
+            print(f"🔧 Converted to PostgreSQL URL")
+        print(f"📊 Using database: {database_url[:60]}...")
         return database_url
     else:
-        # Fallback for local development
-        print("⚠️ DATABASE_URL not found! Using SQLite for local development")
-        return 'sqlite:///homie.db'
+        # Force PostgreSQL on Render
+        print("🚨 FORCING POSTGRESQL CONFIGURATION")
+        # Try to construct the URL from common Render patterns
+        db_host = os.environ.get('PGHOST')
+        db_name = os.environ.get('PGDATABASE', 'homie_ai_db')
+        db_user = os.environ.get('PGUSER', 'homie_ai_user')
+        db_password = os.environ.get('PGPASSWORD')
+        db_port = os.environ.get('PGPORT', '5432')
+        
+        if db_host and db_user and db_password:
+            database_url = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+            print(f"🔧 Constructed PostgreSQL URL: {database_url[:60]}...")
+            return database_url
+        else:
+            print("⚠️ Falling back to SQLite")
+            return 'sqlite:///homie.db'
 
 app.config['SQLALCHEMY_DATABASE_URI'] = get_database_url()
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -100,7 +111,27 @@ with app.app_context():
     except Exception as e:
         print(f"❌ Database initialization failed: {e}")
 
-# ===== REST OF YOUR FUNCTIONS (NO CHANGES NEEDED) =====
+# ===== NEW DEBUG ENDPOINT =====
+@app.route('/api/debug')
+def debug_info():
+    """Debug endpoint to check all configurations"""
+    info = {
+        'database_url': app.config['SQLALCHEMY_DATABASE_URI'][:100] + '...' if app.config['SQLALCHEMY_DATABASE_URI'] else 'None',
+        'database_connected': check_database_connection(),
+        'environment_vars': {
+            'DATABASE_URL_set': bool(os.environ.get('DATABASE_URL')),
+            'PGHOST_set': bool(os.environ.get('PGHOST')),
+            'PGUSER_set': bool(os.environ.get('PGUSER')),
+            'PGPASSWORD_set': bool(os.environ.get('PGPASSWORD')),
+        },
+        'tables': {
+            'users': User.query.count(),
+            'conversations': Conversation.query.count(),
+        }
+    }
+    return jsonify(info)
+
+# ===== REST OF YOUR FUNCTIONS =====
 def allowed_file(filename, file_type='image'):
     if file_type == 'image':
         return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_IMAGE_EXTENSIONS
@@ -175,7 +206,7 @@ def analyze_image_with_gemini(image_path, user_message=""):
     except Exception as e:
         return None
 
-# Database Models (NO CHANGES)
+# Database Models
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
@@ -435,7 +466,7 @@ def get_history():
         print(f"History loading error: {e}")
         return jsonify({'error': 'Failed to load history'}), 500
 
-# ===== REST OF YOUR ROUTES (NO CHANGES NEEDED) =====
+# ===== REST OF YOUR ROUTES =====
 def detect_mood(message):
     """Analyzes user message to detect emotional state"""
     message_lower = message.lower()
