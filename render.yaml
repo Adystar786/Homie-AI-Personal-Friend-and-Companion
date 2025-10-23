@@ -5,7 +5,7 @@ services:
     region: oregon
     plan: free
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "gunicorn 'homie-ai.app:app' --bind 0.0.0.0:$PORT --workers 2 --threads 2"
+    startCommand: "gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --threads 2"
     autoDeploy: true
     envVars:
       - key: SECRET_KEY
@@ -15,4 +15,12 @@ services:
       - key: GOOGLE_API_KEY
         sync: false
       - key: DATABASE_URL
-        sync: false
+        fromDatabase:
+          name: homie-ai-db
+          property: connectionString
+
+databases:
+  - name: homie-ai-db
+    databaseName: homie_ai_db
+    user: homie_ai_user
+    plan: free
