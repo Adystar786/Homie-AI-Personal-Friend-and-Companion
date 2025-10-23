@@ -20,18 +20,30 @@ import numpy as np
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-change-this')
 
-# Database Configuration - Use PostgreSQL on Render, SQLite locally
-DATABASE_URL = os.environ.get('DATABASE_URL')
-if DATABASE_URL:
-    # Fix for Render's postgres:// vs postgresql:// issue
-    if DATABASE_URL.startswith('postgres://'):
-        DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
-    app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
-else:
-    # Local development - use SQLite
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///homie.db'
+# ===== FIXED DATABASE CONFIGURATION =====
+def get_database_url():
+    database_url = os.environ.get('DATABASE_URL')
+    
+    # Debug logging
+    print(f"🔍 Initial DATABASE_URL: {database_url}")
+    
+    if database_url:
+        # Render PostgreSQL uses postgres:// but SQLAlchemy needs postgresql://
+        if database_url.startswith('postgres://'):
+            database_url = database_url.replace('postgres://', 'postgresql://', 1)
+            print(f"🔧 Converted to: {database_url}")
+        return database_url
+    else:
+        # Fallback for local development
+        print("⚠️ Using SQLite for local development")
+        return 'sqlite:///homie.db'
 
+app.config['SQLALCHEMY_DATABASE_URI'] = get_database_url()
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_recycle': 300,
+    'pool_pre_ping': True
+}
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max file size
@@ -53,8 +65,34 @@ groq_client = Groq(api_key=GROQ_API_KEY)
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
 genai.configure(api_key=GOOGLE_API_KEY)
 
-# ... (rest of your code remains exactly the same from here)
+# ===== DATABASE HEALTH CHECK =====
+def check_database_connection():
+    """Check if database connection is working"""
+    try:
+        db.session.execute('SELECT 1')
+        return True
+    except Exception as e:
+        print(f"❌ Database connection error: {e}")
+        return False
 
+# ===== DATABASE INITIALIZATION =====
+with app.app_context():
+    try:
+        print("🔄 Initializing database...")
+        print(f"📊 Database URL: {app.config['SQLALCHEMY_DATABASE_URI'][:50]}...")
+        db.create_all()
+        print("✅ Database tables created successfully")
+        
+        # Test the connection
+        if check_database_connection():
+            print("✅ Database connection test passed")
+        else:
+            print("❌ Database connection test failed")
+            
+    except Exception as e:
+        print(f"❌ Database initialization failed: {e}")
+
+# ===== REST OF YOUR FUNCTIONS (NO CHANGES NEEDED) =====
 def allowed_file(filename, file_type='image'):
     if file_type == 'image':
         return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_IMAGE_EXTENSIONS
@@ -129,7 +167,7 @@ def analyze_image_with_gemini(image_path, user_message=""):
     except Exception as e:
         return None
 
-# Database Models
+# Database Models (NO CHANGES)
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
@@ -233,6 +271,163 @@ class ConversationSummary(db.Model):
     date_range = db.Column(db.String(50))  # '2024-01-01_to_2024-01-07'
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+# ===== NEW DATABASE HEALTH ENDPOINT =====
+@app.route('/api/database-health')
+def database_health():
+    """Check database health and connection"""
+    try:
+        # Test basic connection
+        db.session.execute('SELECT 1')
+        
+        # Get table counts
+        tables = {
+            'users': User.query.count(),
+            'conversations': Conversation.query.count(),
+            'memories': UserMemory.query.count(),
+            'journal_entries': JournalEntry.query.count(),
+            'reminders': Reminder.query.count()
+        }
+        
+        # Check if we're using PostgreSQL
+        is_postgresql = 'postgresql' in app.config['SQLALCHEMY_DATABASE_URI']
+        
+        return jsonify({
+            'status': 'healthy',
+            'database_type': 'PostgreSQL' if is_postgresql else 'SQLite',
+            'connection': 'connected',
+            'tables': tables,
+            'timestamp': datetime.now(timezone.utc).isoformat()
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'status': 'unhealthy',
+            'error': str(e),
+            'database_url_preview': app.config['SQLALCHEMY_DATABASE_URI'][:50] + '...',
+            'timestamp': datetime.now(timezone.utc).isoformat()
+        }), 500
+
+# ===== UPDATED CHAT API WITH BETTER DATABASE HANDLING =====
+@app.route('/api/chat', methods=['POST'])
+def chat_api():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    # Check database connection first
+    if not check_database_connection():
+        return jsonify({'error': 'Database connection issue'}), 500
+    
+    data = request.get_json()
+    user_message = data.get('message')
+    media_analysis = data.get('media_analysis')
+    media_type = data.get('media_type')
+    
+    if not user_message and not media_analysis:
+        return jsonify({'error': 'No message provided'}), 400
+    
+    user_id = session['user_id']
+    user_avatar = session.get('avatar', 'girl')
+    
+    # Store ORIGINAL content in database
+    db_content = user_message or "What do you think about this?"
+    mood = detect_mood(db_content)
+    safe_space_mode = is_distress_detected(db_content, mood)
+    
+    try:
+        # Save user message with explicit commit
+        user_conv = Conversation(
+            user_id=user_id, 
+            role='user', 
+            content=db_content,
+            detected_mood=mood,
+            media_type=media_type,
+            media_analysis=media_analysis
+        )
+        db.session.add(user_conv)
+        db.session.commit()  # Commit immediately
+        
+        # Generate comprehensive user profile from database
+        user_profile = generate_comprehensive_user_profile(user_id)
+        
+        # Extract memories from this conversation
+        try:
+            if user_message and len(user_message.strip()) > 10:
+                extract_memories_from_conversation(user_message, "", user_id, mood)
+        except Exception as e:
+            print(f"Memory extraction in chat failed: {e}")
+        
+        # Create messages for AI with enhanced context
+        messages = [{"role": "system", "content": get_system_prompt(user_profile, mood, safe_space_mode, user_avatar)}]
+        
+        # Add recent conversation history - FIXED ORDER
+        history = Conversation.query.filter_by(user_id=user_id).order_by(Conversation.timestamp.asc()).limit(20).all()
+        
+        for conv in history:
+            if conv.media_analysis and conv.media_type and conv.role == 'user':
+                formatted_content = f"[MEDIA CONTEXT: User shared a {conv.media_type}. Analysis: {conv.media_analysis}]\n\nUser's message: {conv.content}"
+                messages.append({"role": conv.role, "content": formatted_content})
+            else:
+                messages.append({"role": conv.role, "content": conv.content})
+        
+        chat_completion = groq_client.chat.completions.create(
+            messages=messages,
+            model="llama-3.1-8b-instant",
+            temperature=0.8 if not safe_space_mode else 0.6,
+            max_tokens=1024,
+            top_p=0.9,
+        )
+        
+        ai_response = chat_completion.choices[0].message.content
+        
+        # Save AI response
+        ai_conv = Conversation(user_id=user_id, role='assistant', content=ai_response)
+        db.session.add(ai_conv)
+        db.session.commit()  # Commit AI response
+        
+        # Update conversation summary weekly
+        if random.random() < 0.1:
+            try:
+                update_conversation_summary(user_id)
+            except Exception as e:
+                print(f"Summary update failed: {e}")
+        
+        return jsonify({
+            'response': ai_response,
+            'mood': mood,
+            'safe_space_mode': safe_space_mode,
+            'memory_used': len(user_profile) > 100
+        })
+    
+    except Exception as e:
+        db.session.rollback()  # Rollback on error
+        print(f"Chat API error: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+# ===== UPDATED HISTORY ENDPOINT =====
+@app.route('/api/history')
+def get_history():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    user_id = session['user_id']
+    
+    # Check database connection
+    if not check_database_connection():
+        return jsonify({'error': 'Database connection issue'}), 500
+    
+    try:
+        # Get conversations in chronological order
+        conversations = Conversation.query.filter_by(user_id=user_id).order_by(Conversation.timestamp.asc()).all()
+        
+        print(f"📨 Loaded {len(conversations)} conversations for user {user_id}")
+        
+        return jsonify([c.to_dict() for c in conversations])
+    
+    except Exception as e:
+        print(f"History loading error: {e}")
+        return jsonify({'error': 'Failed to load history'}), 500
+
+# ===== REST OF YOUR ROUTES (NO CHANGES NEEDED) =====
 def detect_mood(message):
     """Analyzes user message to detect emotional state"""
     message_lower = message.lower()
@@ -568,97 +763,6 @@ def upload_media():
             pass
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/chat', methods=['POST'])
-def chat_api():
-    if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    data = request.get_json()
-    user_message = data.get('message')
-    media_analysis = data.get('media_analysis')
-    media_type = data.get('media_type')
-    
-    if not user_message and not media_analysis:
-        return jsonify({'error': 'No message provided'}), 400
-    
-    user_id = session['user_id']
-    user_avatar = session.get('avatar', 'girl')
-    
-    # Store ORIGINAL content in database
-    db_content = user_message or "What do you think about this?"
-    mood = detect_mood(db_content)
-    safe_space_mode = is_distress_detected(db_content, mood)
-    
-    # Save user message
-    user_conv = Conversation(
-        user_id=user_id, 
-        role='user', 
-        content=db_content,
-        detected_mood=mood,
-        media_type=media_type,
-        media_analysis=media_analysis
-    )
-    db.session.add(user_conv)
-    db.session.commit()
-    
-    # Generate comprehensive user profile (includes memories)
-    user_profile = generate_comprehensive_user_profile(user_id)
-    
-    # Extract memories from this conversation (async - don't wait for response)
-    try:
-        # Only extract if message is meaningful
-        if user_message and len(user_message.strip()) > 10:
-            extract_memories_from_conversation(user_message, "", user_id, mood)
-    except Exception as e:
-        print(f"Memory extraction in chat failed: {e}")
-        # Don't let memory extraction block chat
-    
-    # Create messages for AI with enhanced context
-    messages = [{"role": "system", "content": get_system_prompt(user_profile, mood, safe_space_mode, user_avatar)}]
-    
-    # Add recent conversation history
-    history = Conversation.query.filter_by(user_id=user_id).order_by(Conversation.timestamp.desc()).limit(15)[::-1]  # Get last 15, reversed
-    
-    for conv in history:
-        if conv.media_analysis and conv.media_type and conv.role == 'user':
-            formatted_content = f"[MEDIA CONTEXT: User shared a {conv.media_type}. Analysis: {conv.media_analysis}]\n\nUser's message: {conv.content}"
-            messages.append({"role": conv.role, "content": formatted_content})
-        else:
-            messages.append({"role": conv.role, "content": conv.content})
-    
-    try:
-        chat_completion = groq_client.chat.completions.create(
-            messages=messages,
-            model="llama-3.1-8b-instant",
-            temperature=0.8 if not safe_space_mode else 0.6,
-            max_tokens=1024,
-            top_p=0.9,
-        )
-        
-        ai_response = chat_completion.choices[0].message.content
-        
-        # Save AI response
-        ai_conv = Conversation(user_id=user_id, role='assistant', content=ai_response)
-        db.session.add(ai_conv)
-        db.session.commit()
-        
-        # Update conversation summary weekly
-        if random.random() < 0.1:  # 10% chance to check for summary update
-            try:
-                update_conversation_summary(user_id)
-            except:
-                pass
-        
-        return jsonify({
-            'response': ai_response,
-            'mood': mood,
-            'safe_space_mode': safe_space_mode,
-            'memory_used': len(user_profile) > 100  # Indicate if memories were used
-        })
-    
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-    
 @app.route('/api/memories')
 def get_user_memories():
     if 'user_id' not in session:
@@ -692,16 +796,6 @@ def get_user_profile():
     
     profile = generate_comprehensive_user_profile(session['user_id'])
     return jsonify({'profile': profile})
-
-@app.route('/api/history')
-def get_history():
-    if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    user_id = session['user_id']
-    conversations = Conversation.query.filter_by(user_id=user_id).order_by(Conversation.timestamp).all()
-    
-    return jsonify([c.to_dict() for c in conversations])
 
 @app.route('/api/clear-history', methods=['POST'])
 def clear_history():
