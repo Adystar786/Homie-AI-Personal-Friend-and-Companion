@@ -85,8 +85,16 @@ with app.app_context():
         is_postgresql = 'postgresql' in app.config['SQLALCHEMY_DATABASE_URI']
         print(f"🗄️ Database type: {'PostgreSQL' if is_postgresql else 'SQLite'}")
         
+        # FORCE table creation
+        print("🔨 Creating all tables...")
         db.create_all()
         print("✅ Database tables created successfully")
+        
+        # Verify tables
+        from sqlalchemy import inspect
+        inspector = inspect(db.engine)
+        tables = inspector.get_table_names()
+        print(f"📋 Available tables: {', '.join(tables)}")
         
         # Test the connection
         if check_database_connection():
@@ -96,6 +104,8 @@ with app.app_context():
             
     except Exception as e:
         print(f"❌ Database initialization failed: {e}")
+        import traceback
+        traceback.print_exc()
 
 # ===== NEW DEBUG ENDPOINT =====
 @app.route('/api/debug')
