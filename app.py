@@ -18,8 +18,19 @@ import cv2
 import numpy as np
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your-secret-key-change-this'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///homie.db'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-change-this')
+
+# Database Configuration - Use PostgreSQL on Render, SQLite locally
+DATABASE_URL = os.environ.get('DATABASE_URL')
+if DATABASE_URL:
+    # Fix for Render's postgres:// vs postgresql:// issue
+    if DATABASE_URL.startswith('postgres://'):
+        DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
+else:
+    # Local development - use SQLite
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///homie.db'
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
 app.config['UPLOAD_FOLDER'] = 'uploads'
@@ -41,6 +52,8 @@ groq_client = Groq(api_key=GROQ_API_KEY)
 # Configure Google Gemini for vision
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
 genai.configure(api_key=GOOGLE_API_KEY)
+
+# ... (rest of your code remains exactly the same from here)
 
 def allowed_file(filename, file_type='image'):
     if file_type == 'image':
@@ -962,7 +975,7 @@ def extract_memories_from_conversation(user_message, ai_response, user_id, curre
             else:
                 # Update importance and timestamp if memory exists
                 existing_memory.importance_score = max(existing_memory.importance_score, memory["importance"])
-                existing_memory.last_referenced =  datetime.now(timezone.utc)
+                existing_memory.last_referenced = datetime.now(timezone.utc)
         
         db.session.commit()
         if memory_count > 0:
