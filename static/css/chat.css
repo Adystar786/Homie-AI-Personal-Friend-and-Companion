@@ -175,15 +175,71 @@ body {
     gap: 10px;
     animation: messageIn 0.4s ease;
     max-width: 85%;
+    transform-origin: bottom;
 }
 
 .message.user {
     align-self: flex-end;
     flex-direction: row-reverse;
+    transform-origin: bottom right;
+    animation: userMessagePop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .message.assistant {
     align-self: flex-start;
+    transform-origin: bottom left;
+    animation: aiMessagePop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes userMessagePop {
+    0% {
+        opacity: 0;
+        transform: translateY(20px) scale(0.8) translateX(10px);
+    }
+    50% {
+        transform: translateY(-5px) scale(1.05) translateX(-2px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1) translateX(0);
+    }
+}
+
+@keyframes aiMessagePop {
+    0% {
+        opacity: 0;
+        transform: translateY(20px) scale(0.8) translateX(-10px);
+    }
+    50% {
+        transform: translateY(-5px) scale(1.05) translateX(2px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1) translateX(0);
+    }
+}
+
+/* Optional: Add hover effects to enhance the pop feeling */
+.message.user .message-content {
+    background: rgba(80, 80, 80, 0.8);
+    color: #f0f0f0;
+    border-bottom-right-radius: 5px;
+    transition: transform 0.2s ease;
+}
+
+.message.assistant .message-content {
+    background: rgba(50, 50, 50, 0.8);
+    color: #f0f0f0;
+    border-bottom-left-radius: 5px;
+    transition: transform 0.2s ease;
+}
+
+.message.user .message-content:hover {
+    transform: translateX(-2px) translateY(-1px);
+}
+
+.message.assistant .message-content:hover {
+    transform: translateX(2px) translateY(-1px);
 }
 
 @keyframes messageIn {
@@ -1526,5 +1582,36 @@ input:checked + .slider:before {
     .static-background,
     .video-background video {
         image-rendering: -webkit-optimize-contrast;
+    }
+}
+
+/* For mobile devices, reduce the animation intensity */
+@media (max-width: 768px) {
+    @keyframes userMessagePop {
+        0% {
+            opacity: 0;
+            transform: translateY(15px) scale(0.9) translateX(5px);
+        }
+        70% {
+            transform: translateY(-3px) scale(1.02) translateX(-1px);
+        }
+        100% {
+            opacity: 1;
+            transform: translateY(0) scale(1) translateX(0);
+        }
+    }
+    
+    @keyframes aiMessagePop {
+        0% {
+            opacity: 0;
+            transform: translateY(15px) scale(0.9) translateX(-5px);
+        }
+        70% {
+            transform: translateY(-3px) scale(1.02) translateX(1px);
+        }
+        100% {
+            opacity: 1;
+            transform: translateY(0) scale(1) translateX(0);
+        }
     }
 }
