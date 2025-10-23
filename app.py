@@ -28,29 +28,22 @@ def get_database_url():
     print(f"🔍 DATABASE_URL from environment: {'Found' if database_url else 'NOT FOUND'}")
     
     if database_url and database_url != 'sqlite:///homie.db':
-        # Render PostgreSQL uses postgres:// but SQLAlchemy needs postgresql://
+        # Handle both postgres:// and postgresql:// schemes
         if database_url.startswith('postgres://'):
             database_url = database_url.replace('postgres://', 'postgresql://', 1)
-            print(f"🔧 Converted to PostgreSQL URL")
+            print(f"🔧 Converted postgres:// to postgresql://")
+        
+        # For psycopg3, ensure we use postgresql+psycopg scheme
+        if 'psycopg[binary]' in str(database_url) or True:  # Always use psycopg for PostgreSQL
+            if database_url.startswith('postgresql://'):
+                # psycopg3 uses the same postgresql:// scheme
+                print(f"✅ Using psycopg3 driver with PostgreSQL")
+        
         print(f"📊 Using database: {database_url[:60]}...")
         return database_url
     else:
-        # Force PostgreSQL on Render
-        print("🚨 FORCING POSTGRESQL CONFIGURATION")
-        # Try to construct the URL from common Render patterns
-        db_host = os.environ.get('PGHOST')
-        db_name = os.environ.get('PGDATABASE', 'homie_ai_db')
-        db_user = os.environ.get('PGUSER', 'homie_ai_user')
-        db_password = os.environ.get('PGPASSWORD')
-        db_port = os.environ.get('PGPORT', '5432')
-        
-        if db_host and db_user and db_password:
-            database_url = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
-            print(f"🔧 Constructed PostgreSQL URL: {database_url[:60]}...")
-            return database_url
-        else:
-            print("⚠️ Falling back to SQLite")
-            return 'sqlite:///homie.db'
+        print("⚠️ No DATABASE_URL found, using SQLite")
+        return 'sqlite:///homie.db'
 
 app.config['SQLALCHEMY_DATABASE_URI'] = get_database_url()
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
