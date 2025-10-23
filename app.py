@@ -28,23 +28,23 @@ def get_database_url():
     print(f"🔍 DATABASE_URL from environment: {'Found' if database_url else 'NOT FOUND'}")
     
     if database_url and database_url != 'sqlite:///homie.db':
-        # Handle both postgres:// and postgresql:// schemes
+        # Render PostgreSQL uses postgres:// but SQLAlchemy needs postgresql://
         if database_url.startswith('postgres://'):
             database_url = database_url.replace('postgres://', 'postgresql://', 1)
-            print(f"🔧 Converted postgres:// to postgresql://")
+            print(f"🔧 Converted to PostgreSQL URL")
         
-        # For psycopg3, ensure we use postgresql+psycopg scheme
-        if 'psycopg[binary]' in str(database_url) or True:  # Always use psycopg for PostgreSQL
-            if database_url.startswith('postgresql://'):
-                # psycopg3 uses the same postgresql:// scheme
-                print(f"✅ Using psycopg3 driver with PostgreSQL")
+        # For psycopg3, use postgresql+psycopg driver explicitly
+        if database_url.startswith('postgresql://'):
+            # Replace postgresql:// with postgresql+psycopg:// for psycopg3
+            database_url = database_url.replace('postgresql://', 'postgresql+psycopg://', 1)
+            print(f"✅ Using psycopg3 driver with PostgreSQL")
         
         print(f"📊 Using database: {database_url[:60]}...")
         return database_url
     else:
-        print("⚠️ No DATABASE_URL found, using SQLite")
+        print("⚠️ Falling back to SQLite")
         return 'sqlite:///homie.db'
-
+        
 app.config['SQLALCHEMY_DATABASE_URI'] = get_database_url()
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
