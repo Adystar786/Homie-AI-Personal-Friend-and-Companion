@@ -16,6 +16,7 @@ from PIL import Image
 import io
 import cv2
 import numpy as np
+from sqlalchemy import text
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-change-this')
