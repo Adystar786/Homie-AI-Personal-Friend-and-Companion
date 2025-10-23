@@ -18,6 +18,27 @@ services:
         fromDatabase:
           name: homie-ai-db
           property: connectionString
+      # ADD THESE NEW ENVIRONMENT VARIABLES:
+      - key: PGHOST
+        fromDatabase:
+          name: homie-ai-db
+          property: host
+      - key: PGPORT
+        fromDatabase:
+          name: homie-ai-db
+          property: port
+      - key: PGDATABASE
+        fromDatabase:
+          name: homie-ai-db
+          property: database
+      - key: PGUSER
+        fromDatabase:
+          name: homie-ai-db
+          property: user
+      - key: PGPASSWORD
+        fromDatabase:
+          name: homie-ai-db
+          property: password
 
 databases:
   - name: homie-ai-db
