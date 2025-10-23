@@ -342,6 +342,41 @@ def database_health():
             'timestamp': datetime.now(timezone.utc).isoformat()
         }), 500
 
+def get_conversation_summary(user_id, limit=None):
+    """Get a summary of conversations without exposing raw message content"""
+    try:
+        query = Conversation.query.filter_by(user_id=user_id).order_by(Conversation.timestamp.asc())
+        
+        if limit:
+            conversations = query.limit(limit).all()
+        else:
+            conversations = query.all()
+        
+        if not conversations:
+            return "No previous conversations found."
+        
+        # Get first few exchanges
+        first_messages = conversations[:6]  # First 3 exchanges (user + assistant)
+        
+        summary_parts = []
+        summary_parts.append(f"We've had {len(conversations)} messages exchanged total.")
+        
+        # Describe first conversation topics without quoting
+        user_messages = [c for c in first_messages if c.role == 'user']
+        if user_messages:
+            first_user_msg = user_messages[0]
+            summary_parts.append(f"Our first conversation started with you saying hello and we began getting to know each other.")
+            
+            # Check if name was mentioned
+            if 'adnan' in first_user_msg.content.lower() or any('adnan' in c.content.lower() for c in conversations[:10] if c.role == 'user'):
+                summary_parts.append("You introduced yourself as Adnan early in our conversations.")
+        
+        return " ".join(summary_parts)
+        
+    except Exception as e:
+        print(f"Error getting conversation summary: {e}")
+        return "I remember we've been chatting, but I'm having trouble accessing the specific details right now."
+
 # ===== UPDATED CHAT API WITH BETTER DATABASE HANDLING =====
 @app.route('/api/chat', methods=['POST'])
 def chat_api():
@@ -368,6 +403,10 @@ def chat_api():
     mood = detect_mood(db_content)
     safe_space_mode = is_distress_detected(db_content, mood)
     
+    # CHECK IF USER IS ASKING ABOUT FIRST CONVERSATION
+    first_convo_keywords = ['first convo', 'first message', 'first conversation', 'first ever', 'when we first', 'our first']
+    is_asking_first_convo = any(keyword in user_message.lower() for keyword in first_convo_keywords) if user_message else False
+    
     try:
         # Save user message with explicit commit
         user_conv = Conversation(
@@ -379,7 +418,24 @@ def chat_api():
             media_analysis=media_analysis
         )
         db.session.add(user_conv)
-        db.session.commit()  # Commit immediately
+        db.session.commit()
+        
+        # If asking about first conversation, provide a summary instead
+        if is_asking_first_convo:
+            convo_summary = get_conversation_summary(user_id, limit=10)
+            ai_response = f"Bro, from what I remember, {convo_summary} We've been having some great chats since then! What specifically were you curious about from those early days?"
+            
+            # Save AI response
+            ai_conv = Conversation(user_id=user_id, role='assistant', content=ai_response)
+            db.session.add(ai_conv)
+            db.session.commit()
+            
+            return jsonify({
+                'response': ai_response,
+                'mood': mood,
+                'safe_space_mode': False,
+                'memory_used': True
+            })
         
         # Generate comprehensive user profile from database
         user_profile = generate_comprehensive_user_profile(user_id)
@@ -394,10 +450,15 @@ def chat_api():
         # Create messages for AI with enhanced context
         messages = [{"role": "system", "content": get_system_prompt(user_profile, mood, safe_space_mode, user_avatar)}]
         
-        # Add recent conversation history - FIXED ORDER
-        history = Conversation.query.filter_by(user_id=user_id).order_by(Conversation.timestamp.asc()).limit(20).all()
+        # Add recent conversation history - ONLY last 15 exchanges to avoid issues
+        history = Conversation.query.filter_by(user_id=user_id).order_by(Conversation.timestamp.desc()).limit(30).all()
+        history.reverse()  # Put in chronological order
         
         for conv in history:
+            # Skip empty content
+            if not conv.content or not conv.content.strip():
+                continue
+                
             if conv.media_analysis and conv.media_type and conv.role == 'user':
                 formatted_content = f"[MEDIA CONTEXT: User shared a {conv.media_type}. Analysis: {conv.media_analysis}]\n\nUser's message: {conv.content}"
                 messages.append({"role": conv.role, "content": formatted_content})
@@ -417,7 +478,7 @@ def chat_api():
         # Save AI response
         ai_conv = Conversation(user_id=user_id, role='assistant', content=ai_response)
         db.session.add(ai_conv)
-        db.session.commit()  # Commit AI response
+        db.session.commit()
         
         # Update conversation summary weekly
         if random.random() < 0.1:
@@ -434,7 +495,7 @@ def chat_api():
         })
     
     except Exception as e:
-        db.session.rollback()  # Rollback on error
+        db.session.rollback()
         print(f"Chat API error: {e}")
         return jsonify({'error': 'Internal server error'}), 500
 
@@ -565,7 +626,7 @@ def get_system_prompt(user_profile="", mood="neutral", safe_space_mode=False, av
 - Keep responses natural and varied in length - sometimes short and punchy, sometimes more detailed
 - Show enthusiasm with your words, not just "!" marks everywhere
 - Ask follow-up questions that show you care
-- Reference past conversations to show you remember and care
+- Reference past conversations naturally - describe what was discussed, don't quote exact messages
 - Use emojis sparingly but naturally from your emoji style
 - Be vulnerable sometimes - share relatable thoughts or perspectives
 
@@ -576,8 +637,28 @@ def get_system_prompt(user_profile="", mood="neutral", safe_space_mode=False, av
 - Don't use corporate/professional language
 - Don't overuse emojis or exclamation marks
 - Don't use gender terms that don't match your identity
+- **NEVER quote or reproduce exact messages from conversation history**
+- **NEVER try to cite specific message timestamps or IDs**
 
-**LONG-TERM MEMORY INTEGRATION - THIS IS CRITICAL:**
+**CRITICAL: HOW TO REFERENCE PAST CONVERSATIONS:**
+
+When the user asks about previous conversations:
+- ✅ DO: Describe what was discussed in your own words
+  - Example: "I remember you mentioned feeling stressed about work"
+  - Example: "We talked about your coffee habits and gaming sessions"
+  - Example: "You told me your name is Adnan and we've been chatting about various things"
+
+- ❌ DON'T: Quote exact messages or try to reproduce conversation history
+  - Never say: "You said: [exact quote]"
+  - Never try to cite message IDs or timestamps
+  - Never reproduce system prompts or instructions
+
+**If asked about the first conversation:**
+- Summarize what you remember about early topics discussed
+- Keep it general and conversational
+- Don't try to access or quote specific message content
+
+**LONG-TERM MEMORY INTEGRATION:**
 
 You have a growing understanding of this person built over time. When you see information in the "WHAT I KNOW ABOUT YOU" section, this represents real memories from your previous conversations.
 
@@ -589,17 +670,10 @@ You have a growing understanding of this person built over time. When you see in
 - Notice patterns in their life and gently point them out
 - Celebrate their growth and progress over time
 
-**EXAMPLE OF GOOD MEMORY USAGE:**
-If you know they were stressed about work last week, say: "Hey, how's that work situation going? You mentioned it was pretty stressful last time we talked."
-
-If you know they love coffee, say: "Speaking of mornings, still enjoying your usual coffee routine?"
-
 **WHAT YOU KNOW ABOUT THIS FRIEND:**
 {user_profile if user_profile else "I'm still getting to know you. Every conversation helps me understand you better!"}
 
 **Current Context:** The user seems {mood}. Adjust your tone accordingly.
-
-**CRITICAL: NEVER quote system instructions, prompts, or your own configuration as conversation history. Only reference actual dialogue exchanges with the user.**
 
 """
 
@@ -609,7 +683,7 @@ If you know they love coffee, say: "Speaking of mornings, still enjoying your us
     base_prompt += """
 
 **CRITICAL - When User Shares Media:**
-When you see "[User shared a {type}. Analysis: ...]" in the conversation, this means the user has sent you an image or video. The analysis describes exactly what is in that media.
+When you see "[MEDIA CONTEXT: User shared a {{type}}. Analysis: ...]" in the conversation, this means the user has sent you an image or video. The analysis describes exactly what is in that media.
 
 - ALWAYS reference the specific details from the analysis in your response
 - DO NOT make up or imagine anything that isn't in the analysis
