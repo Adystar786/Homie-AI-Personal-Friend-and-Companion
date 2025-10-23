@@ -4,6 +4,16 @@
     box-sizing: border-box;
 }
 
+/* Hide all scrollbars */
+* {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+*::-webkit-scrollbar {
+    display: none;
+}
+
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'SF Mono', 'Helvetica Neue', Helvetica, Arial, sans-serif;
     background: url('/static/background.jpg') no-repeat center center;
@@ -13,9 +23,11 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
     position: relative;
     color: #f0f0f0;
+    padding: 20px 0;
 }
 
 html, body {
@@ -209,6 +221,10 @@ input::placeholder {
     flex: 1;
 }
 
+.avatar-option input[type="radio"] {
+    display: none;
+}
+
 .avatar-preview {
     width: 80px;
     height: 80px;
@@ -227,6 +243,7 @@ input::placeholder {
 
 .avatar-option input[type="radio"]:checked + label .avatar-preview {
     border-color: rgba(255,255,255,0.8);
+    transform: scale(1.05);
 }
 
 .avatar-option span {
@@ -239,29 +256,269 @@ input::placeholder {
 
 .avatar-option input[type="radio"]:checked + label span {
     color: #f0f0f0;
+    font-weight: 600;
 }
 
-@media (max-width: 480px) {
+/* ===== RESPONSIVE BREAKPOINTS ===== */
+
+/* Tablets portrait */
+@media (max-width: 768px) {
+    body {
+        padding: 15px 0;
+    }
+    
     .container {
-        width: 95%;
-        max-width: 350px;
-        margin: 10px auto;
+        width: 92%;
+        max-width: 380px;
+        margin: 15px auto;
     }
     
     .card {
-        padding: 30px 20px;
+        padding: 35px 25px;
     }
     
     .logo h1 {
         font-size: 32px;
     }
     
+    .logo p {
+        font-size: 13px;
+    }
+    
     input {
-        padding: 10px 14px;
+        padding: 11px 14px;
         font-size: 14px;
     }
     
     .btn {
+        padding: 13px;
+        font-size: 14px;
+    }
+    
+    .avatar-preview {
+        width: 70px;
+        height: 70px;
+    }
+    
+    .avatar-option span {
+        font-size: 13px;
+    }
+}
+
+/* Mobile phones */
+@media (max-width: 576px) {
+    body {
+        padding: 10px 0;
+        background-attachment: scroll;
+    }
+    
+    .container {
+        width: 95%;
+        max-width: 100%;
+        margin: 10px auto;
+    }
+    
+    .card {
+        padding: 30px 20px;
+        border-radius: 16px;
+    }
+    
+    .logo {
+        margin-bottom: 20px;
+    }
+    
+    .logo h1 {
+        font-size: 28px;
+        margin-bottom: 6px;
+    }
+    
+    .logo p {
+        font-size: 12px;
+    }
+    
+    .input-group {
+        margin-bottom: 14px;
+    }
+    
+    .input-group label {
+        font-size: 13px;
+        margin-bottom: 5px;
+    }
+    
+    input {
+        padding: 10px 14px;
+        font-size: 14px;
+        border-radius: 10px;
+    }
+    
+    .btn {
         padding: 12px;
+        font-size: 14px;
+        border-radius: 10px;
+        margin-top: 6px;
+    }
+    
+    .switch-form {
+        margin-top: 14px;
+        font-size: 12px;
+    }
+    
+    .error-message {
+        padding: 9px 12px;
+        font-size: 12px;
+        margin-bottom: 14px;
+    }
+    
+    .welcome-btns {
+        gap: 10px;
+        margin-top: 20px;
+        flex-direction: column;
+    }
+    
+    .loading {
+        width: 16px;
+        height: 16px;
+        border-width: 2px;
+    }
+    
+    .avatar-selection {
+        gap: 12px;
+        margin-top: 8px;
+    }
+    
+    .avatar-preview {
+        width: 65px;
+        height: 65px;
+        border-width: 2px;
+    }
+    
+    .avatar-option span {
+        font-size: 12px;
+        margin-top: 4px;
+    }
+}
+
+/* Very small phones */
+@media (max-width: 375px) {
+    .container {
+        width: 96%;
+    }
+    
+    .card {
+        padding: 25px 18px;
+    }
+    
+    .logo h1 {
+        font-size: 26px;
+    }
+    
+    .logo p {
+        font-size: 11px;
+    }
+    
+    input {
+        padding: 9px 12px;
+        font-size: 13px;
+    }
+    
+    .btn {
+        padding: 11px;
+        font-size: 13px;
+    }
+    
+    .avatar-preview {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .avatar-option span {
+        font-size: 11px;
+    }
+    
+    .avatar-selection {
+        gap: 10px;
+    }
+}
+
+/* Landscape orientation */
+@media (max-height: 600px) and (orientation: landscape) {
+    body {
+        padding: 10px 0;
+    }
+    
+    .container {
+        margin: 10px auto;
+    }
+    
+    .card {
+        padding: 25px 30px;
+    }
+    
+    .logo {
+        margin-bottom: 15px;
+    }
+    
+    .logo h1 {
+        font-size: 28px;
+        margin-bottom: 5px;
+    }
+    
+    .input-group {
+        margin-bottom: 12px;
+    }
+    
+    input {
+        padding: 9px 14px;
+    }
+    
+    .btn {
+        padding: 10px;
+    }
+    
+    .avatar-preview {
+        width: 55px;
+        height: 55px;
+    }
+    
+    .avatar-selection {
+        margin-top: 8px;
+        gap: 10px;
+    }
+    
+    .welcome-btns {
+        margin-top: 15px;
+        flex-direction: row;
+    }
+}
+
+/* Touch device improvements */
+@media (hover: none) and (pointer: coarse) {
+    .btn,
+    .switch-form a {
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    input {
+        min-height: 44px;
+    }
+    
+    .avatar-preview {
+        min-width: 44px;
+        min-height: 44px;
+    }
+}
+
+/* High DPI screens */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    body {
+        background-image: url('/static/background.jpg');
+        image-rendering: -webkit-optimize-contrast;
+    }
+    
+    .avatar-preview img {
+        image-rendering: -webkit-optimize-contrast;
     }
 }
