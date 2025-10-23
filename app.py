@@ -32,13 +32,6 @@ def get_database_url():
         if database_url.startswith('postgres://'):
             database_url = database_url.replace('postgres://', 'postgresql://', 1)
             print(f"🔧 Converted to PostgreSQL URL")
-        
-        # For psycopg3, use postgresql+psycopg driver explicitly
-        if database_url.startswith('postgresql://'):
-            # Replace postgresql:// with postgresql+psycopg:// for psycopg3
-            database_url = database_url.replace('postgresql://', 'postgresql+psycopg://', 1)
-            print(f"✅ Using psycopg3 driver with PostgreSQL")
-        
         print(f"📊 Using database: {database_url[:60]}...")
         return database_url
     else:
