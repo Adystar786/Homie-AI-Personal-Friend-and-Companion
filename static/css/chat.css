@@ -14,6 +14,16 @@ body {
     color: #f0f0f0;
 }
 
+/* Hide all scrollbars */
+* {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+*::-webkit-scrollbar {
+    display: none;
+}
+
 .static-background {
     position: fixed;
     top: 0;
@@ -160,20 +170,6 @@ body {
     -webkit-overflow-scrolling: touch;
 }
 
-.messages-container::-webkit-scrollbar {
-    width: 6px;
-}
-
-.messages-container::-webkit-scrollbar-track {
-    background: rgba(30, 30, 30, 0.8);
-    border-radius: 3px;
-}
-
-.messages-container::-webkit-scrollbar-thumb {
-    background: rgba(100, 100, 100, 0.5);
-    border-radius: 3px;
-}
-
 .message {
     display: flex;
     gap: 10px;
@@ -195,16 +191,9 @@ body {
     to { opacity: 1; transform: translateY(0); }
 }
 
+/* Hide message avatars */
 .message-avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: rgba(60, 60, 60, 0.8);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    flex-shrink: 0;
+    display: none;
 }
 
 .message-content {
@@ -688,6 +677,309 @@ input:checked + .slider:before {
     }
 }
 
+/* ===== MODAL STYLES ===== */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 2000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(5px);
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.modal-content {
+    background: rgba(30, 30, 30, 0.95);
+    margin: auto;
+    padding: 25px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    max-width: 600px;
+    width: 100%;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    position: relative;
+    animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modal-header h2 {
+    color: #f0f0f0;
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.close-modal {
+    background: rgba(255, 100, 100, 0.2);
+    border: 1px solid rgba(255, 100, 100, 0.3);
+    color: #ff6b6b;
+    font-size: 24px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    padding: 0;
+    line-height: 1;
+}
+
+.close-modal:hover {
+    background: rgba(255, 100, 100, 0.3);
+    transform: scale(1.1);
+}
+
+.modal-body {
+    color: #f0f0f0;
+}
+
+.modal-section {
+    margin-bottom: 25px;
+}
+
+.modal-section h3 {
+    color: rgba(240, 240, 240, 0.9);
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 12px;
+}
+
+.quick-prompts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.quick-prompt-btn {
+    background: rgba(60, 60, 60, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #f0f0f0;
+    padding: 10px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s ease;
+    text-align: left;
+}
+
+.quick-prompt-btn:hover {
+    background: rgba(80, 80, 80, 0.8);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    color: rgba(240, 240, 240, 0.9);
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 6px;
+}
+
+.form-group textarea,
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 12px 14px;
+    background: rgba(50, 50, 50, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    color: #f0f0f0;
+    font-size: 14px;
+    font-family: 'Montserrat', sans-serif;
+    transition: all 0.3s ease;
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 100px;
+    max-height: 200px;
+    line-height: 1.5;
+}
+
+.form-group textarea:focus,
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    background: rgba(60, 60, 60, 0.8);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.form-group textarea::placeholder,
+.form-group input::placeholder {
+    color: rgba(240, 240, 240, 0.5);
+}
+
+.btn-primary {
+    width: 100%;
+    padding: 14px;
+    background: rgba(100, 150, 200, 0.8);
+    border: 1px solid rgba(100, 150, 200, 0.3);
+    border-radius: 10px;
+    color: white;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 10px;
+}
+
+.btn-primary:hover {
+    background: rgba(120, 170, 220, 0.8);
+    transform: translateY(-2px);
+}
+
+.entries-list {
+    max-height: 400px;
+    overflow-y: auto;
+    margin-top: 20px;
+}
+
+.entry-item {
+    background: rgba(50, 50, 50, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 12px;
+    transition: all 0.2s ease;
+}
+
+.entry-item:hover {
+    background: rgba(60, 60, 60, 0.6);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+.entry-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.entry-date {
+    color: rgba(240, 240, 240, 0.6);
+    font-size: 13px;
+}
+
+.entry-mood {
+    font-size: 20px;
+}
+
+.entry-content {
+    color: #f0f0f0;
+    line-height: 1.6;
+    font-size: 14px;
+}
+
+.reminder-item {
+    background: rgba(50, 50, 50, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-left: 3px solid rgba(255, 180, 100, 0.6);
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+    transition: all 0.2s ease;
+}
+
+.reminder-item:hover {
+    background: rgba(60, 60, 60, 0.6);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+.reminder-info {
+    flex: 1;
+    min-width: 200px;
+}
+
+.reminder-title {
+    color: #f0f0f0;
+    font-weight: 600;
+    font-size: 15px;
+    margin-bottom: 6px;
+}
+
+.reminder-time {
+    color: rgba(240, 240, 240, 0.6);
+    font-size: 13px;
+}
+
+.reminder-overdue {
+    color: #ff6b6b;
+    font-weight: 600;
+    margin-left: 8px;
+}
+
+.btn-delete {
+    background: rgba(255, 100, 100, 0.2);
+    border: 1px solid rgba(255, 100, 100, 0.3);
+    color: #ff6b6b;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.btn-delete:hover {
+    background: rgba(255, 100, 100, 0.3);
+    transform: scale(1.05);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: rgba(240, 240, 240, 0.5);
+}
+
+.empty-state-icon {
+    font-size: 48px;
+    margin-bottom: 15px;
+    opacity: 0.5;
+}
+
+.empty-state-text {
+    font-size: 15px;
+    line-height: 1.5;
+}
+
 /* ===== RESPONSIVE BREAKPOINTS ===== */
 
 /* Tablets and smaller laptops */
@@ -699,6 +991,11 @@ input:checked + .slider:before {
     
     .message {
         max-width: 90%;
+    }
+    
+    .modal-content {
+        max-width: 90%;
+        padding: 20px;
     }
 }
 
@@ -733,12 +1030,6 @@ input:checked + .slider:before {
     .message {
         max-width: 90%;
         gap: 8px;
-    }
-    
-    .message-avatar {
-        width: 28px;
-        height: 28px;
-        font-size: 14px;
     }
     
     .message-content {
@@ -787,19 +1078,38 @@ input:checked + .slider:before {
     .dropdown-menu {
         min-width: 180px;
     }
+    
+    .modal-content {
+        padding: 20px;
+        margin: 10px auto;
+    }
+    
+    .modal-header h2 {
+        font-size: 20px;
+    }
+    
+    .quick-prompts {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 8px;
+    }
+    
+    .entries-list {
+        max-height: 300px;
+    }
 }
 
 /* Mobile phones landscape and portrait */
 @media (max-width: 576px) {
     .header {
         padding: 8px 12px;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         gap: 8px;
     }
     
     .header-left {
         gap: 8px;
         flex: 1 1 auto;
+        min-width: 0;
     }
     
     .header-info h2 {
@@ -812,7 +1122,7 @@ input:checked + .slider:before {
     
     .header-actions {
         gap: 6px;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
     }
     
     .header-btn {
@@ -836,13 +1146,7 @@ input:checked + .slider:before {
     }
     
     .message {
-        max-width: 92%;
-    }
-    
-    .message-avatar {
-        width: 26px;
-        height: 26px;
-        font-size: 13px;
+        max-width: 95%;
     }
     
     .message-content {
@@ -948,6 +1252,138 @@ input:checked + .slider:before {
         height: 26px;
         font-size: 14px;
     }
+    
+    /* Modal mobile optimizations */
+    .modal {
+        padding: 10px;
+    }
+    
+    .modal-content {
+        padding: 18px;
+        margin: 0 auto;
+        max-width: 100%;
+    }
+    
+    .modal-header {
+        margin-bottom: 15px;
+        padding-bottom: 12px;
+    }
+    
+    .modal-header h2 {
+        font-size: 18px;
+    }
+    
+    .close-modal {
+        width: 28px;
+        height: 28px;
+        font-size: 20px;
+    }
+    
+    .modal-section {
+        margin-bottom: 20px;
+    }
+    
+    .modal-section h3 {
+        font-size: 15px;
+        margin-bottom: 10px;
+    }
+    
+    .quick-prompts {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+    
+    .quick-prompt-btn {
+        padding: 8px 10px;
+        font-size: 12px;
+    }
+    
+    .form-group {
+        margin-bottom: 12px;
+    }
+    
+    .form-group label {
+        font-size: 13px;
+        margin-bottom: 5px;
+    }
+    
+    .form-group textarea,
+    .form-group input,
+    .form-group select {
+        padding: 10px 12px;
+        font-size: 13px;
+    }
+    
+    .form-group textarea {
+        min-height: 80px;
+    }
+    
+    .btn-primary {
+        padding: 12px;
+        font-size: 14px;
+    }
+    
+    .entries-list {
+        max-height: 250px;
+    }
+    
+    .entry-item {
+        padding: 12px;
+        margin-bottom: 10px;
+    }
+    
+    .entry-header {
+        gap: 6px;
+    }
+    
+    .entry-date {
+        font-size: 12px;
+    }
+    
+    .entry-mood {
+        font-size: 18px;
+    }
+    
+    .entry-content {
+        font-size: 13px;
+        line-height: 1.5;
+    }
+    
+    .reminder-item {
+        padding: 12px;
+        gap: 10px;
+    }
+    
+    .reminder-info {
+        min-width: 150px;
+    }
+    
+    .reminder-title {
+        font-size: 14px;
+        margin-bottom: 5px;
+    }
+    
+    .reminder-time {
+        font-size: 12px;
+    }
+    
+    .btn-delete {
+        padding: 7px 12px;
+        font-size: 12px;
+    }
+    
+    .empty-state {
+        padding: 30px 15px;
+    }
+    
+    .empty-state-icon {
+        font-size: 36px;
+        margin-bottom: 12px;
+    }
+    
+    .empty-state-text {
+        font-size: 14px;
+    }
 }
 
 /* Very small phones */
@@ -995,6 +1431,28 @@ input:checked + .slider:before {
         width: 38px;
         font-size: 13px;
     }
+    
+    .modal-content {
+        padding: 15px;
+    }
+    
+    .modal-header h2 {
+        font-size: 16px;
+    }
+    
+    .quick-prompts {
+        gap: 6px;
+    }
+    
+    .quick-prompt-btn {
+        padding: 7px 8px;
+        font-size: 11px;
+    }
+    
+    .entry-item,
+    .reminder-item {
+        padding: 10px;
+    }
 }
 
 /* Landscape orientation fixes */
@@ -1029,6 +1487,15 @@ input:checked + .slider:before {
         font-size: 14px;
         margin-bottom: 5px;
     }
+    
+    .modal-content {
+        margin: 5px auto;
+        max-height: 95vh;
+    }
+    
+    .entries-list {
+        max-height: 200px;
+    }
 }
 
 /* Touch device improvements */
@@ -1036,13 +1503,28 @@ input:checked + .slider:before {
     .header-btn,
     .send-btn,
     .media-btn,
-    .dropdown-item {
+    .dropdown-item,
+    .quick-prompt-btn,
+    .btn-primary,
+    .btn-delete {
         min-height: 44px;
-        min-width: 44px;
     }
     
     .profile-btn {
         min-height: 40px;
         min-width: 40px;
+    }
+    
+    .close-modal {
+        min-height: 32px;
+        min-width: 32px;
+    }
+}
+
+/* High DPI screens */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .static-background,
+    .video-background video {
+        image-rendering: -webkit-optimize-contrast;
     }
 }
