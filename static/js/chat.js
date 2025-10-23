@@ -809,7 +809,12 @@ document.addEventListener('click', function(event) {
 });
 
 // ===== INITIALIZATION =====
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log('🚀 Initializing Homie AI...');
+    
+    // Check database health first
+    await checkDatabaseHealth();
+    
     loadGreeting();
     loadHistory();
     
@@ -827,3 +832,24 @@ document.addEventListener('DOMContentLoaded', () => {
     
     setupDropdownItems();
 });
+
+// Add this function to check database health
+async function checkDatabaseHealth() {
+    try {
+        const response = await fetch('/api/database-health');
+        const health = await response.json();
+        console.log('🩺 Database Health:', health);
+        
+        if (health.status === 'healthy') {
+            console.log(`✅ Database connected (${health.database_type})`);
+            console.log(`📊 Tables:`, health.tables);
+            return true;
+        } else {
+            console.error('❌ Database health check failed:', health.error);
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ Failed to check database health:', error);
+        return false;
+    }
+}
