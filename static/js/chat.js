@@ -341,7 +341,7 @@ function activateCalmMode() {
     document.body.appendChild(overlay);
 }
 
-// ===== MESSAGE HANDLING =====
+// ===== FIXED MESSAGE HANDLING =====
 function addMessage(role, content, hasMedia = false, mediaTypeStr = null) {
     const container = document.getElementById('messagesContainer');
     const welcomeMsg = container.querySelector('.welcome-message');
@@ -349,10 +349,6 @@ function addMessage(role, content, hasMedia = false, mediaTypeStr = null) {
 
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${role}`;
-    
-    const avatar = document.createElement('div');
-    avatar.className = 'message-avatar';
-    avatar.textContent = role === 'user' ? '👤' : '🏠';
     
     const content_div = document.createElement('div');
     content_div.className = 'message-content';
@@ -366,14 +362,20 @@ function addMessage(role, content, hasMedia = false, mediaTypeStr = null) {
         content_div.appendChild(document.createElement('br'));
     }
     
-    const textNode = document.createTextNode(content);
-    content_div.appendChild(textNode);
+    // Ensure content is properly displayed
+    if (content && content.trim()) {
+        content_div.innerHTML = content.replace(/\n/g, '<br>');
+    } else {
+        content_div.innerHTML = '<em>Empty message</em>';
+    }
     
-    messageDiv.appendChild(avatar);
     messageDiv.appendChild(content_div);
     container.appendChild(messageDiv);
     
+    // Force reflow and scroll
     container.scrollTop = container.scrollHeight;
+    
+    console.log(`📨 Added ${role} message:`, content.substring(0, 100) + '...');
 }
 
 function showTyping() {
@@ -413,7 +415,7 @@ async function sendMessage() {
     document.getElementById('sendBtn').disabled = true;
     
     let uploadedMediaData = null;
-    let currentMediaAnalysis = null;  // Use local variables instead of global
+    let currentMediaAnalysis = null;
     let currentMediaType = null;
     
     // If media is selected, upload and analyze it first
@@ -423,14 +425,10 @@ async function sendMessage() {
             uploadedMediaData = await uploadAndAnalyzeMedia(message || "What do you think about this?");
             hideTyping();
             
-            // Store analysis for sending to chat API
-            currentMediaAnalysis = uploadedMediaData.analysis;  // Local variable
-            currentMediaType = uploadedMediaData.media_type;    // Local variable
+            currentMediaAnalysis = uploadedMediaData.analysis;
+            currentMediaType = uploadedMediaData.media_type;
             
-            // Display user message with media indicator
             addMessage('user', message || "What do you think about this?", true, currentMediaType);
-            
-            // Clear media selection UI but keep data for API call
             clearMediaSelection();
             
         } catch (error) {
@@ -457,17 +455,21 @@ async function sendMessage() {
     const minDelay = 4000;
 
     try {
+        console.log('📤 Sending message to API...');
         const response = await fetch('/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
                 message: message || "What do you think about this?",
-                media_analysis: currentMediaAnalysis,  // Use local variable
-                media_type: currentMediaType           // Use local variable
+                media_analysis: currentMediaAnalysis,
+                media_type: currentMediaType
             })
         });
 
+        console.log('📥 API response status:', response.status);
         const data = await response.json();
+        console.log('📥 API response data:', data);
+        
         const elapsed = Date.now() - startTime;
         const remainingDelay = Math.max(0, minDelay - elapsed);
         
@@ -475,6 +477,7 @@ async function sendMessage() {
             hideTyping();
             
             if (response.ok) {
+                console.log('✅ Adding AI response to chat');
                 addMessage('assistant', data.response);
                 
                 if (data.mood) {
@@ -489,7 +492,8 @@ async function sendMessage() {
                     }, 1000);
                 }
             } else {
-                addMessage('assistant', 'Sorry, I had trouble responding. Try again?');
+                console.error('❌ API error:', data);
+                addMessage('assistant', `Sorry, I encountered an error: ${data.error || 'Unknown error'}`);
             }
             
             videoTimeout = setTimeout(hideVideoBackground, 500);
@@ -499,6 +503,7 @@ async function sendMessage() {
         }, remainingDelay);
         
     } catch (error) {
+        console.error('❌ Network error:', error);
         const elapsed = Date.now() - startTime;
         const remainingDelay = Math.max(0, minDelay - elapsed);
         
