@@ -341,7 +341,7 @@ function activateCalmMode() {
     document.body.appendChild(overlay);
 }
 
-// ===== FIXED MESSAGE HANDLING =====
+// ===== MESSAGE HANDLING =====
 function addMessage(role, content, hasMedia = false, mediaTypeStr = null) {
     const container = document.getElementById('messagesContainer');
     const welcomeMsg = container.querySelector('.welcome-message');
@@ -349,6 +349,10 @@ function addMessage(role, content, hasMedia = false, mediaTypeStr = null) {
 
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${role}`;
+    
+    const avatar = document.createElement('div');
+    avatar.className = 'message-avatar';
+    avatar.textContent = role === 'user' ? '👤' : '🏠';
     
     const content_div = document.createElement('div');
     content_div.className = 'message-content';
@@ -362,22 +366,24 @@ function addMessage(role, content, hasMedia = false, mediaTypeStr = null) {
         content_div.appendChild(document.createElement('br'));
     }
     
-    // Ensure content is properly displayed
+    // ADD THIS CONTENT VALIDATION:
     if (content && content.trim()) {
-        content_div.innerHTML = content.replace(/\n/g, '<br>');
+        const textNode = document.createTextNode(content);
+        content_div.appendChild(textNode);
     } else {
-        content_div.innerHTML = '<em>Empty message</em>';
+        content_div.innerHTML = '<em>Message could not be loaded</em>';
+        console.error('Empty content received for message:', { role, content, hasMedia, mediaTypeStr });
     }
     
+    messageDiv.appendChild(avatar);
     messageDiv.appendChild(content_div);
     container.appendChild(messageDiv);
     
-    // Force reflow and scroll
     container.scrollTop = container.scrollHeight;
     
-    console.log(`📨 Added ${role} message:`, content.substring(0, 100) + '...');
+    // ADD THIS LOGGING:
+    console.log(`📨 Added ${role} message:`, content ? content.substring(0, 100) + '...' : 'EMPTY');
 }
-
 function showTyping() {
     const container = document.getElementById('messagesContainer');
     const typingDiv = document.createElement('div');
@@ -467,7 +473,10 @@ async function sendMessage() {
         });
 
         console.log('📥 API response status:', response.status);
-        const data = await response.json();
+                const data = await response.json();
+        
+        // ADD THIS LOGGING:
+        console.log('📥 API response status:', response.status);
         console.log('📥 API response data:', data);
         
         const elapsed = Date.now() - startTime;
@@ -477,21 +486,29 @@ async function sendMessage() {
             hideTyping();
             
             if (response.ok) {
-                console.log('✅ Adding AI response to chat');
-                addMessage('assistant', data.response);
-                
-                if (data.mood) {
-                    updateMoodVisuals(data.mood, data.safe_space_mode);
-                }
-                
-                if (data.safe_space_mode) {
-                    setTimeout(() => {
-                        if (confirm('I sense you might be feeling overwhelmed. Would you like to try a calming breathing exercise?')) {
-                            activateCalmMode();
-                        }
-                    }, 1000);
+                // ADD THIS VALIDATION:
+                if (data.response && data.response.trim()) {
+                    console.log('✅ Adding AI response to chat');
+                    addMessage('assistant', data.response);
+                    
+                    if (data.mood) {
+                        updateMoodVisuals(data.mood, data.safe_space_mode);
+                    }
+                    
+                    if (data.safe_space_mode) {
+                        setTimeout(() => {
+                            if (confirm('I sense you might be feeling overwhelmed. Would you like to try a calming breathing exercise?')) {
+                                activateCalmMode();
+                            }
+                        }, 1000);
+                    }
+                } else {
+                    // ADD THIS ERROR HANDLING:
+                    console.error('❌ Empty AI response received:', data);
+                    addMessage('assistant', "I'm here, but I'm having trouble responding right now. Please try again.");
                 }
             } else {
+                // ENHANCE THIS ERROR MESSAGE:
                 console.error('❌ API error:', data);
                 addMessage('assistant', `Sorry, I encountered an error: ${data.error || 'Unknown error'}`);
             }
