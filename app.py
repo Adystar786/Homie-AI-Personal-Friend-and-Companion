@@ -32,11 +32,13 @@ def get_database_url():
         # Render PostgreSQL uses postgres:// but SQLAlchemy needs postgresql://
         if database_url.startswith('postgres://'):
             database_url = database_url.replace('postgres://', 'postgresql://', 1)
-            print(f"🔧 Converted to: {database_url}")
+            print(f"🔧 Converted to PostgreSQL URL: {database_url[:50]}...")
+        else:
+            print(f"🔧 Using existing database URL: {database_url[:50]}...")
         return database_url
     else:
         # Fallback for local development
-        print("⚠️ Using SQLite for local development")
+        print("⚠️ DATABASE_URL not found! Using SQLite for local development")
         return 'sqlite:///homie.db'
 
 app.config['SQLALCHEMY_DATABASE_URI'] = get_database_url()
@@ -70,7 +72,7 @@ genai.configure(api_key=GOOGLE_API_KEY)
 def check_database_connection():
     """Check if database connection is working"""
     try:
-        db.session.execute('SELECT 1')
+        db.session.execute(text('SELECT 1'))  # ← FIXED: Use text() wrapper
         return True
     except Exception as e:
         print(f"❌ Database connection error: {e}")
@@ -81,6 +83,11 @@ with app.app_context():
     try:
         print("🔄 Initializing database...")
         print(f"📊 Database URL: {app.config['SQLALCHEMY_DATABASE_URI'][:50]}...")
+        
+        # Check if we're using PostgreSQL
+        is_postgresql = 'postgresql' in app.config['SQLALCHEMY_DATABASE_URI']
+        print(f"🗄️ Database type: {'PostgreSQL' if is_postgresql else 'SQLite'}")
+        
         db.create_all()
         print("✅ Database tables created successfully")
         
@@ -277,8 +284,8 @@ class ConversationSummary(db.Model):
 def database_health():
     """Check database health and connection"""
     try:
-        # Test basic connection
-        db.session.execute('SELECT 1')
+        # Test basic connection with text() wrapper
+        db.session.execute(text('SELECT 1'))  # ← FIXED
         
         # Get table counts
         tables = {
