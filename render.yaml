@@ -2,6 +2,7 @@ services:
   - type: web
     name: homie-ai
     env: python
+    runtime: python-3.11.9
     region: oregon
     plan: free
     buildCommand: "pip install -r requirements.txt"
@@ -18,7 +19,6 @@ services:
         fromDatabase:
           name: homie-ai-db
           property: connectionString
-      # ADD THESE NEW ENVIRONMENT VARIABLES:
       - key: PGHOST
         fromDatabase:
           name: homie-ai-db
