@@ -70,49 +70,74 @@ def segment_response(response_text):
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-change-this')
 
-# ===== FIXED DATABASE CONFIGURATION =====
+# ===== IMPROVED DATABASE CONFIGURATION FOR NEON =====
 def get_database_url():
+    """Get database URL with proper error handling for Neon PostgreSQL"""
     database_url = os.environ.get('DATABASE_URL', '').strip()
     
     print(f"🔍 DATABASE_URL from environment: {'Found' if database_url else 'NOT FOUND'}")
     
     if database_url and database_url != 'sqlite:///homie.db':
-        # Render PostgreSQL uses postgres:// but SQLAlchemy needs postgresql://
+        # Handle both postgres:// and postgresql:// formats
         if database_url.startswith('postgres://'):
             database_url = database_url.replace('postgres://', 'postgresql://', 1)
-            print(f"🔧 Converted to PostgreSQL URL")
-        print(f"📊 Using database: {database_url[:60]}...")
+            print(f"🔧 Converted postgres:// to postgresql://")
+        
+        # Validate and display connection info
+        if '@' in database_url:
+            try:
+                host_part = database_url.split('@')[1].split('/')[0]
+                print(f"📊 Connecting to: {host_part}")
+            except:
+                pass
+        
+        print(f"📊 Using PostgreSQL database")
         return database_url
     else:
-        print("⚠️ Falling back to SQLite")
+        print("⚠️ Using SQLite (local development)")
         return 'sqlite:///homie.db'
         
 app.config['SQLALCHEMY_DATABASE_URI'] = get_database_url()
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Optimized engine options for Neon PostgreSQL
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'pool_recycle': 300,
-    'pool_pre_ping': True
+    'pool_recycle': 280,  # Recycle connections before timeout
+    'pool_pre_ping': True,  # Verify connections are alive
+    'pool_size': 5,  # Connection pool size
+    'max_overflow': 2,  # Additional connections if pool is full
+    'pool_timeout': 30,  # Wait time for connection from pool
+    'connect_args': {
+        'connect_timeout': 10,
+        'application_name': 'homie_ai',
+        'options': '-c statement_timeout=30000'  # 30 second query timeout
+    }
 }
+
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max file size
 
-# Create uploads folder if it doesn't exist
+# Create necessary folders
 os.makedirs('instance', exist_ok=True)
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
-ALLOWED_VIDEO_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv', 'webm'}
+# ... rest of your existing code ...
 
-db = SQLAlchemy(app)
-load_dotenv()
-
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
-groq_client = Groq(api_key=GROQ_API_KEY)
-
-# Configure Google Gemini for vision
-GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
-genai.configure(api_key=GOOGLE_API_KEY)
+# ===== IMPROVED DATABASE HEALTH CHECK =====
+def check_database_connection():
+    """Check if database connection is working with proper error handling"""
+    try:
+        db.session.execute(text('SELECT 1'))
+        db.session.commit()
+        return True
+    except Exception as e:
+        print(f"❌ Database connection error: {e}")
+        try:
+            db.session.rollback()
+        except:
+            pass
+        return False
 
 # ===== DATABASE HEALTH CHECK =====
 def check_database_connection():
