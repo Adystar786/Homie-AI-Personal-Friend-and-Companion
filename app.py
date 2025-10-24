@@ -18,6 +18,55 @@ import cv2
 import numpy as np
 from sqlalchemy import text
 
+def segment_response(response_text):
+    """
+    Segments AI response into natural message chunks
+    70% chance of segmentation, 30% single message
+    """
+    # 30% chance to keep as single message
+    if random.random() < 0.3:
+        return [response_text]
+    
+    # Clean up the response
+    response_text = response_text.strip()
+    
+    # Split points: sentence endings, natural breaks
+    # Look for periods, question marks, exclamation marks followed by space
+    sentence_pattern = r'(?<=[.!?])\s+(?=[A-Z])'
+    sentences = re.split(sentence_pattern, response_text)
+    
+    # If only 1-2 sentences, don't segment
+    if len(sentences) <= 2:
+        return [response_text]
+    
+    # Group sentences into 2-3 messages
+    segments = []
+    
+    # Determine number of segments (2 or 3)
+    num_segments = random.choice([2, 3])
+    
+    if num_segments == 2:
+        # Split roughly in half
+        mid_point = len(sentences) // 2
+        segments.append(' '.join(sentences[:mid_point]).strip())
+        segments.append(' '.join(sentences[mid_point:]).strip())
+    
+    elif num_segments == 3:
+        # Split into thirds
+        third = len(sentences) // 3
+        segments.append(' '.join(sentences[:third]).strip())
+        segments.append(' '.join(sentences[third:third*2]).strip())
+        segments.append(' '.join(sentences[third*2:]).strip())
+    
+    # Filter out empty segments
+    segments = [seg for seg in segments if seg]
+    
+    # If segmentation resulted in tiny pieces, just return original
+    if any(len(seg) < 20 for seg in segments) and len(segments) > 1:
+        return [response_text]
+    
+    return segments if len(segments) > 1 else [response_text]
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-change-this')
 
@@ -475,7 +524,10 @@ def chat_api():
         
         ai_response = chat_completion.choices[0].message.content
         
-        # Save AI response
+        # Segment the response into multiple messages
+        message_segments = segment_response(ai_response)
+        
+        # Save the FULL response as one database entry (for history continuity)
         ai_conv = Conversation(user_id=user_id, role='assistant', content=ai_response)
         db.session.add(ai_conv)
         db.session.commit()
@@ -487,8 +539,10 @@ def chat_api():
             except Exception as e:
                 print(f"Summary update failed: {e}")
         
+        # Return segmented messages to frontend
         return jsonify({
-            'response': ai_response,
+            'response': ai_response,  # Full response for backward compatibility
+            'segments': message_segments,  # NEW: Segmented messages
             'mood': mood,
             'safe_space_mode': safe_space_mode,
             'memory_used': len(user_profile) > 100
