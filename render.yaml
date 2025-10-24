@@ -38,11 +38,3 @@ services:
       
       - key: FLASK_ENV
         value: production
-
-# Database - PostgreSQL
-databases:
-  - name: homie-postgres
-    databaseName: homie_db
-    user: homie_user
-    plan: free
-    region: oregon
