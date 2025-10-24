@@ -409,6 +409,36 @@ function hideTyping() {
     if (typing) typing.remove();
 }
 
+// this function to display messages with natural delays
+async function displaySegmentedMessages(segments, mood, safeSpaceMode) {
+    // Random delay between messages (1-3 seconds)
+    const getRandomDelay = () => Math.random() * 2000 + 1000;
+    
+    for (let i = 0; i < segments.length; i++) {
+        const segment = segments[i];
+        
+        // Show typing indicator before each segment
+        if (i > 0) {
+            showTyping();
+            await new Promise(resolve => setTimeout(resolve, getRandomDelay()));
+            hideTyping();
+        }
+        
+        // Add the message
+        addMessage('assistant', segment);
+        
+        // Small pause after displaying message (except for last one)
+        if (i < segments.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 300));
+        }
+    }
+    
+    // Update mood after all segments are displayed
+    if (mood) {
+        updateMoodVisuals(mood, safeSpaceMode);
+    }
+}
+
 async function sendMessage() {
     if (isTyping) return;
 
@@ -458,7 +488,7 @@ async function sendMessage() {
     showTyping();
 
     const startTime = Date.now();
-    const minDelay = 4000;
+    const minDelay = 2000; // Reduced since we'll add delays between segments
 
     try {
         console.log('📤 Sending message to API...');
@@ -473,42 +503,50 @@ async function sendMessage() {
         });
 
         console.log('📥 API response status:', response.status);
-                const data = await response.json();
+        const data = await response.json();
         
-        // ADD THIS LOGGING:
-        console.log('📥 API response status:', response.status);
         console.log('📥 API response data:', data);
         
         const elapsed = Date.now() - startTime;
         const remainingDelay = Math.max(0, minDelay - elapsed);
         
-        setTimeout(() => {
+        setTimeout(async () => {
             hideTyping();
             
             if (response.ok) {
-                // ADD THIS VALIDATION:
-                if (data.response && data.response.trim()) {
-                    console.log('✅ Adding AI response to chat');
+                // Check if we have segmented messages
+                if (data.segments && data.segments.length > 0) {
+                    console.log(`✅ Displaying ${data.segments.length} segmented messages`);
+                    
+                    // Display segments with natural delays
+                    await displaySegmentedMessages(
+                        data.segments, 
+                        data.mood, 
+                        data.safe_space_mode
+                    );
+                    
+                } else if (data.response && data.response.trim()) {
+                    // Fallback to single message
+                    console.log('✅ Adding single AI response to chat');
                     addMessage('assistant', data.response);
                     
                     if (data.mood) {
                         updateMoodVisuals(data.mood, data.safe_space_mode);
                     }
-                    
-                    if (data.safe_space_mode) {
-                        setTimeout(() => {
-                            if (confirm('I sense you might be feeling overwhelmed. Would you like to try a calming breathing exercise?')) {
-                                activateCalmMode();
-                            }
-                        }, 1000);
-                    }
                 } else {
-                    // ADD THIS ERROR HANDLING:
                     console.error('❌ Empty AI response received:', data);
                     addMessage('assistant', "I'm here, but I'm having trouble responding right now. Please try again.");
                 }
+                
+                // Check for safe space mode
+                if (data.safe_space_mode) {
+                    setTimeout(() => {
+                        if (confirm('I sense you might be feeling overwhelmed. Would you like to try a calming breathing exercise?')) {
+                            activateCalmMode();
+                        }
+                    }, 1000);
+                }
             } else {
-                // ENHANCE THIS ERROR MESSAGE:
                 console.error('❌ API error:', data);
                 addMessage('assistant', `Sorry, I encountered an error: ${data.error || 'Unknown error'}`);
             }
