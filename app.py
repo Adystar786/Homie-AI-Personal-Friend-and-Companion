@@ -98,7 +98,6 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'connect_args': {
         'connect_timeout': 10,
         'application_name': 'homie_ai',
-        'options': '-c statement_timeout=30000'
     }
 }
 
